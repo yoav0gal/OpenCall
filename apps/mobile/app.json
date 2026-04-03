@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "OpenCall",
+    "slug": "opencall",
+    "scheme": "opencall",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.opencall.mobile"
+    },
+    "android": {
+      "package": "com.opencall.mobile"
+    }
+  }
+}

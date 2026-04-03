@@ -1,0 +1,13 @@
+{
+  "name": "opencall",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "bridge:dev": "cd apps/bridge && bun run dev",
+    "bridge:check": "cd apps/bridge && bun run check",
+    "mobile:start": "cd apps/mobile && bun run start",
+    "mobile:typecheck": "cd apps/mobile && bun run typecheck"
+  }
+}
