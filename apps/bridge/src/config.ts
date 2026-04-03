@@ -5,6 +5,8 @@ const configSchema = z.object({
   OPENCALL_BRIDGE_NAME: z.string().default("OpenCall Bridge"),
   OPENCALL_PUBLIC_URL: z.string().url().default("http://localhost:8787"),
   OPENCALL_ALLOWED_ORIGIN: z.string().default("*"),
+  OPENCALL_HOME: z.string().default("."),
+  OPENCALL_DATA_DIR: z.string().default("./data"),
   LIVEKIT_URL: z.string().default("ws://127.0.0.1:7880"),
   LIVEKIT_API_KEY: z.string().default("devkey"),
   LIVEKIT_API_SECRET: z.string().default("secret"),

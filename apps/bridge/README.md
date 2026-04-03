@@ -5,11 +5,16 @@ Minimal Bun + TypeScript bridge for the first OpenCall prototype.
 It currently provides:
 
 - `GET /health`
+- `GET /devices`
 - `GET /pairing`
 - `POST /pair`
+- `POST /calls`
+- `GET /calls/current`
+- `POST /calls/current/accept`
+- `POST /calls/current/end`
 - `POST /livekit/token`
 - `GET /gemini/status`
-- `GET /ws` websocket endpoint
+- `GET /realtime?sessionToken=...` websocket endpoint
 
 ## Install
 
@@ -34,6 +39,19 @@ bun run bridge:dev
 ```
 
 The default server address is `http://localhost:8787`.
+
+Bridge state is persisted under `apps/bridge/data/bridge-state.json` by default.
+The CLI can override this with `OPENCALL_HOME` and `OPENCALL_DATA_DIR`.
+
+## Run through the CLI
+
+```bash
+bun run cli:start
+bun run cli:status
+bun run cli:pair
+bun run cli:logs
+bun run cli:stop
+```
 
 ## Run LiveKit locally
 
@@ -64,3 +82,5 @@ is already running.
   the long-lived Gemini API key.
 - The current Gemini endpoint only validates whether the key is configured and
   can create ephemeral tokens later if needed.
+- WebSocket clients now require a valid `sessionToken` returned from `POST /pair`.
+- CLI `status` reports both PID-file state and actual HTTP reachability.
