@@ -27,13 +27,27 @@ cp apps/bridge/.env.example apps/bridge/.env.local
 
 The bridge reads `apps/bridge/.env.local` automatically when started with Bun.
 
-## Run the bridge
+## Run the bridge directly
 
 ```bash
 bun run bridge:dev
 ```
 
-The default server address is `http://localhost:8787`.
+## Run the bridge via CLI
+
+From repo root:
+
+```bash
+bun run cli:start
+bun run cli:status
+bun run cli:pair
+bun run cli:stop
+```
+
+The CLI stores runtime files under `~/.opencall/runtime/` and the bridge stores
+its persistent identity + paired devices under `~/.opencall/bridge-store.json`.
+
+The default server address is `http://127.0.0.1:8787`.
 
 ## Run LiveKit locally
 
@@ -64,3 +78,4 @@ is already running.
   the long-lived Gemini API key.
 - The current Gemini endpoint only validates whether the key is configured and
   can create ephemeral tokens later if needed.
+- Bridge identity and paired devices now persist across restarts.

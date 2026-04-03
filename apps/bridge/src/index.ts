@@ -8,7 +8,9 @@ import { createLiveKitToken } from "./livekit";
 import {
   addPairedDevice,
   clearExpiredPairingSession,
+  getBridgeIdentity,
   getPairingSession,
+  getStorePath,
   listPairedDevices,
   setPairingSession
 } from "./store";
@@ -25,8 +27,9 @@ const livekitTokenSchema = z.object({
 });
 
 const clients = new Set<ServerWebSocket<unknown>>();
-const bridgeId = `bridge_${crypto.randomUUID()}`;
-const bridgePublicKey = crypto.randomUUID().replaceAll("-", "");
+const bridgeIdentity = getBridgeIdentity();
+const bridgeId = bridgeIdentity.bridgeId;
+const bridgePublicKey = bridgeIdentity.bridgePublicKey;
 
 function createPairingPayload() {
   const pairingToken = crypto.randomUUID();
@@ -95,14 +98,15 @@ const server = Bun.serve({
       clearExpiredPairingSession();
 
       return jsonResponse({
-              ok: true,
-              bridgeId,
-              bridgeName: config.OPENCALL_BRIDGE_NAME,
-              status: "ok",
-              publicUrl: config.OPENCALL_PUBLIC_URL,
-              livekitUrl: config.LIVEKIT_URL,
-              pairedDevices: listPairedDevices(),
-        websocketClients: clients.size
+        ok: true,
+        bridgeId,
+        bridgeName: config.OPENCALL_BRIDGE_NAME,
+        status: "ok",
+        publicUrl: config.OPENCALL_PUBLIC_URL,
+        livekitUrl: config.LIVEKIT_URL,
+        pairedDevices: listPairedDevices(),
+        websocketClients: clients.size,
+        storePath: getStorePath()
       });
     }
 
