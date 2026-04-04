@@ -9,6 +9,7 @@ The repo currently has:
 - `apps/bridge` - Bun + TypeScript bridge server
 - `apps/mobile` - Expo mobile prototype
 - `apps/cli` - local CLI for running the bridge like a small machine service
+- `apps/liveClaw` - standalone experimental FastAPI + Pipecat + Gemini Live browser app
 
 ## Bridge CLI
 

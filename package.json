@@ -17,6 +17,9 @@
     "cli:status": "cd apps/cli && bun run src/index.ts status",
     "cli:pair": "cd apps/cli && bun run src/index.ts pair",
     "cli:logs": "cd apps/cli && bun run src/index.ts logs",
-    "cli:typecheck": "cd apps/cli && bun run typecheck"
+    "cli:typecheck": "cd apps/cli && bun run typecheck",
+    "liveclaw:setup": "cd apps/liveClaw && uv sync",
+    "liveclaw:dev": "cd apps/liveClaw && uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8010",
+    "liveclaw:test": "cd apps/liveClaw && uv run pytest"
   }
 }

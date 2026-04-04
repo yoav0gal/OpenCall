@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>liveClaw</title>
+    <link rel="stylesheet" href="/assets/src/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Local Pipecat + Gemini Live</p>
+          <h1>liveClaw</h1>
+          <p class="lede">
+            Browser-first audio, text, and camera loop with reconnect grace and compressed
+            context.
+          </p>
+        </div>
+        <div class="status-row">
+          <span class="chip" id="connection-chip">idle</span>
+          <span class="chip chip-muted" id="transport-chip">transport: idle</span>
+          <span class="chip chip-muted" id="session-chip">session: none</span>
+        </div>
+      </section>
+
+      <section class="controls panel">
+        <div class="control-grid">
+          <label>
+            <span>Display name</span>
+            <input id="display-name" value="Browser User" />
+          </label>
+          <div class="button-row">
+            <button id="connect-btn">Connect</button>
+            <button id="disconnect-btn" class="secondary" disabled>Disconnect</button>
+            <button id="mic-btn" class="secondary" disabled>Mute mic</button>
+            <button id="camera-btn" class="secondary" disabled>Enable camera</button>
+          </div>
+        </div>
+        <div class="text-row">
+          <input id="text-input" placeholder="Type to the session" />
+          <button id="send-btn" class="secondary" disabled>Send</button>
+        </div>
+      </section>
+
+      <section class="stage">
+        <div class="panel media-panel">
+          <div class="panel-header">Camera</div>
+          <video id="local-video" autoplay playsinline muted></video>
+          <audio id="remote-audio" autoplay></audio>
+        </div>
+        <div class="panel transcript-panel">
+          <div class="panel-header">Transcript</div>
+          <div id="transcript-list" class="list"></div>
+        </div>
+        <div class="panel diagnostics-panel">
+          <div class="panel-header">Diagnostics</div>
+          <div id="diagnostic-list" class="list diagnostics"></div>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+  </html>
