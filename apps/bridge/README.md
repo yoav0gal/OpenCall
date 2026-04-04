@@ -13,6 +13,7 @@ It currently provides:
 - `POST /calls/current/accept`
 - `POST /calls/current/end`
 - `POST /livekit/token`
+- `POST /gemini/token`
 - `GET /gemini/status`
 - `GET /realtime?sessionToken=...` websocket endpoint
 
@@ -80,7 +81,7 @@ is already running.
 
 - Gemini Live stays server-side in the bridge. The mobile client should not hold
   the long-lived Gemini API key.
-- The current Gemini endpoint only validates whether the key is configured and
-  can create ephemeral tokens later if needed.
+- `POST /gemini/token` now returns a short-lived Gemini Live ephemeral token for
+  an already paired device session.
 - WebSocket clients now require a valid `sessionToken` returned from `POST /pair`.
 - CLI `status` reports both PID-file state and actual HTTP reachability.

@@ -11,6 +11,10 @@
   },
   "devDependencies": {
     "@types/bun": "^1.3.11",
+    "@types/qrcode-terminal": "^0.12.2",
     "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "qrcode-terminal": "^0.12.0"
   }
 }

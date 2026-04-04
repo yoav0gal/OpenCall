@@ -2,16 +2,21 @@ import type { ServerWebSocket } from "bun";
 import QRCode from "qrcode";
 
 import { config } from "./config";
-import { getGeminiStatus } from "./gemini";
+import { createGeminiLiveToken, getGeminiStatus, runGeminiLiveTextTurn, runGeminiVoiceTurn } from "./gemini";
 import { buildRoomName, createLiveKitToken } from "./livekit";
 import {
+  clientLogBodySchema,
   createCallBodySchema,
+  geminiLiveTurnBodySchema,
+  geminiTokenBodySchema,
+  geminiVoiceTurnQuerySchema,
   livekitTokenSchema,
   pairBodySchema,
   updateCallBodySchema
 } from "./protocol";
 import {
   addPairedDevice,
+  addClientLogEntry,
   archiveActiveCall,
   clearExpiredPairingSession,
   getActiveCall,
@@ -19,6 +24,7 @@ import {
   getPairedDeviceBySessionToken,
   getPairingSession,
   getStorePath,
+  listClientLogEntries,
   listPairedDevices,
   listRecentCalls,
   markDeviceSeen,
@@ -36,6 +42,26 @@ const clients = new Set<ServerWebSocket<ClientData>>();
 const bridgeIdentity = getBridgeIdentity();
 const bridgeId = bridgeIdentity.bridgeId;
 const bridgePublicKey = bridgeIdentity.bridgePublicKey;
+const publicBasePath = (() => {
+  const pathname = new URL(config.OPENCALL_PUBLIC_URL).pathname.replace(/\/$/, "");
+  return pathname === "/" ? "" : pathname;
+})();
+
+function getRoutePath(pathname: string) {
+  if (!publicBasePath) {
+    return pathname;
+  }
+
+  if (pathname === publicBasePath) {
+    return "/";
+  }
+
+  if (pathname.startsWith(`${publicBasePath}/`)) {
+    return pathname.slice(publicBasePath.length) || "/";
+  }
+
+  return pathname;
+}
 
 function createPairingPayload() {
   const pairingToken = crypto.randomUUID();
@@ -90,6 +116,16 @@ function websocketUrl() {
   return `${config.OPENCALL_PUBLIC_URL.replace(/^http/, "ws").replace(/\/$/, "")}/realtime`;
 }
 
+function logServerEvent(event: string, details?: Record<string, unknown>) {
+  console.log(
+    JSON.stringify({
+      timestamp: new Date().toISOString(),
+      event,
+      ...details
+    })
+  );
+}
+
 function unauthorizedResponse() {
   return jsonResponse(
     {
@@ -104,12 +140,13 @@ const server = Bun.serve<ClientData>({
   port: config.PORT,
   fetch(req, serverInstance) {
     const url = new URL(req.url);
+    const routePath = getRoutePath(url.pathname);
 
     if (req.method === "OPTIONS") {
       return jsonResponse({ ok: true });
     }
 
-    if (url.pathname === "/ws" || url.pathname === "/realtime") {
+    if (routePath === "/ws" || routePath === "/realtime") {
       const sessionToken = url.searchParams.get("sessionToken");
       const device = sessionToken ? getPairedDeviceBySessionToken(sessionToken) : null;
 
@@ -123,7 +160,7 @@ const server = Bun.serve<ClientData>({
       return success ? undefined : new Response("WebSocket upgrade failed", { status: 400 });
     }
 
-    if (url.pathname === "/health" && req.method === "GET") {
+    if (routePath === "/health" && req.method === "GET") {
       return Promise.resolve(clearExpiredPairingSession()).then(() =>
         jsonResponse({
           ok: true,
@@ -136,19 +173,70 @@ const server = Bun.serve<ClientData>({
           websocketClients: clients.size,
           activeCall: getActiveCall(),
           recentCalls: listRecentCalls(),
+          recentClientLogs: listClientLogEntries(),
           storePath: getStorePath()
         })
       );
     }
 
-    if (url.pathname === "/devices" && req.method === "GET") {
+    if (routePath === "/logs/client" && req.method === "GET") {
+      return jsonResponse({
+        ok: true,
+        logs: listClientLogEntries()
+      });
+    }
+
+    if (routePath === "/logs/client" && req.method === "POST") {
+      return req
+        .json()
+        .then((body) => clientLogBodySchema.parse(body))
+        .then(async (body) => {
+          const device = body.sessionToken ? getPairedDeviceBySessionToken(body.sessionToken) : null;
+          const entry = {
+            id: `clientlog_${crypto.randomUUID()}`,
+            level: body.level,
+            source: body.source,
+            message: body.message,
+            createdAt: new Date().toISOString(),
+            bridgeId,
+            deviceId: device?.id ?? null,
+            deviceName: device?.deviceName ?? null,
+            sessionToken: body.sessionToken ?? null,
+            context: body.context
+          } as const;
+
+          await addClientLogEntry(entry);
+          logServerEvent("client.log", {
+            level: entry.level,
+            source: entry.source,
+            deviceId: entry.deviceId,
+            message: entry.message
+          });
+
+          return jsonResponse({
+            ok: true,
+            entry
+          });
+        })
+        .catch((error) =>
+          jsonResponse(
+            {
+              ok: false,
+              error: error instanceof Error ? error.message : "Could not store client log"
+            },
+            { status: 400 }
+          )
+        );
+    }
+
+    if (routePath === "/devices" && req.method === "GET") {
       return jsonResponse({
         ok: true,
         devices: listPairedDevices()
       });
     }
 
-    if (url.pathname === "/pairing" && req.method === "GET") {
+    if (routePath === "/pairing" && req.method === "GET") {
       return Promise.resolve(clearExpiredPairingSession()).then(() => {
         const payload = createPairingPayload();
         return QRCode.toDataURL(JSON.stringify(payload)).then((qrCodeDataUrl) =>
@@ -160,7 +248,7 @@ const server = Bun.serve<ClientData>({
       });
     }
 
-    if (url.pathname === "/pair" && req.method === "POST") {
+    if (routePath === "/pair" && req.method === "POST") {
       return req
         .json()
         .then((body) => pairBodySchema.parse(body))
@@ -222,7 +310,7 @@ const server = Bun.serve<ClientData>({
         );
     }
 
-    if (url.pathname === "/livekit/token" && req.method === "POST") {
+    if (routePath === "/livekit/token" && req.method === "POST") {
       return req
         .json()
         .then((body) => livekitTokenSchema.parse(body))
@@ -244,7 +332,7 @@ const server = Bun.serve<ClientData>({
         );
     }
 
-    if (url.pathname === "/calls" && req.method === "POST") {
+    if (routePath === "/calls" && req.method === "POST") {
       return req
         .json()
         .then((body) => createCallBodySchema.parse(body))
@@ -300,14 +388,14 @@ const server = Bun.serve<ClientData>({
         );
     }
 
-    if (url.pathname === "/calls/current" && req.method === "GET") {
+    if (routePath === "/calls/current" && req.method === "GET") {
       return jsonResponse({
         ok: true,
         call: getActiveCall()
       });
     }
 
-    if (url.pathname === "/calls/current/accept" && req.method === "POST") {
+    if (routePath === "/calls/current/accept" && req.method === "POST") {
       return req
         .json()
         .then((body) => updateCallBodySchema.parse(body))
@@ -354,7 +442,7 @@ const server = Bun.serve<ClientData>({
         );
     }
 
-    if (url.pathname === "/calls/current/end" && req.method === "POST") {
+    if (routePath === "/calls/current/end" && req.method === "POST") {
       return req
         .json()
         .then((body) => updateCallBodySchema.parse(body))
@@ -402,8 +490,131 @@ const server = Bun.serve<ClientData>({
         );
     }
 
-    if (url.pathname === "/gemini/status" && req.method === "GET") {
+    if (routePath === "/gemini/status" && req.method === "GET") {
       return getGeminiStatus().then((status) => jsonResponse(status));
+    }
+
+    if (routePath === "/gemini/token" && req.method === "POST") {
+      return req
+        .json()
+        .then((body) => geminiTokenBodySchema.parse(body))
+        .then(async (body) => {
+          const device = getPairedDeviceBySessionToken(body.sessionToken);
+
+          if (!device) {
+            return unauthorizedResponse();
+          }
+
+          const token = await createGeminiLiveToken();
+
+          return jsonResponse({
+            ok: true,
+            deviceId: device.id,
+            ...token
+          });
+        })
+        .catch((error) =>
+          jsonResponse(
+            {
+              ok: false,
+              error: error instanceof Error ? error.message : "Could not create Gemini token"
+            },
+            { status: 400 }
+          )
+        );
+    }
+
+    if (routePath === "/gemini/voice-turn" && req.method === "POST") {
+      const parsedQuery = geminiVoiceTurnQuerySchema.safeParse({
+        sessionToken: url.searchParams.get("sessionToken")
+      });
+
+      if (!parsedQuery.success) {
+        return unauthorizedResponse();
+      }
+
+      const device = getPairedDeviceBySessionToken(parsedQuery.data.sessionToken);
+
+      if (!device) {
+        return unauthorizedResponse();
+      }
+
+      return req
+        .formData()
+        .then(async (form) => {
+          const audio = form.get("audio");
+
+          if (!(audio instanceof File)) {
+            return jsonResponse(
+              {
+                ok: false,
+                error: "Missing audio upload"
+              },
+              { status: 400 }
+            );
+          }
+
+          const result = await runGeminiVoiceTurn(
+            new Uint8Array(await audio.arrayBuffer()),
+            audio.type || undefined,
+            audio.name || undefined
+          );
+
+          logServerEvent("gemini.voice_turn.completed", {
+            deviceId: device.id,
+            transcript: result.transcript
+          });
+
+          return jsonResponse({
+            ok: true,
+            deviceId: device.id,
+            ...result
+          });
+        })
+        .catch((error) =>
+          jsonResponse(
+            {
+              ok: false,
+              error: error instanceof Error ? error.message : "Could not process Gemini voice turn"
+            },
+            { status: 400 }
+          )
+        );
+    }
+
+    if (routePath === "/gemini/live-turn" && req.method === "POST") {
+      return req
+        .json()
+        .then((body) => geminiLiveTurnBodySchema.parse(body))
+        .then(async (body) => {
+          const device = getPairedDeviceBySessionToken(body.sessionToken);
+
+          if (!device) {
+            return unauthorizedResponse();
+          }
+
+          const result = await runGeminiLiveTextTurn(body.prompt);
+          logServerEvent("gemini.live_turn.completed", {
+            deviceId: device.id,
+            prompt: body.prompt,
+            transcript: result.transcript
+          });
+
+          return jsonResponse({
+            ok: true,
+            deviceId: device.id,
+            ...result
+          });
+        })
+        .catch((error) =>
+          jsonResponse(
+            {
+              ok: false,
+              error: error instanceof Error ? error.message : "Could not process Gemini Live turn"
+            },
+            { status: 400 }
+          )
+        );
     }
 
     return new Response("Not found", { status: 404 });
@@ -423,6 +634,10 @@ const server = Bun.serve<ClientData>({
 
       clients.add(ws);
       void markDeviceSeen(ws.data.deviceId);
+      logServerEvent("ws.open", {
+        deviceId: ws.data.deviceId,
+        clients: clients.size + 1
+      });
       ws.send(
         JSON.stringify({
           type: "ack",
@@ -440,6 +655,10 @@ const server = Bun.serve<ClientData>({
           if (ws.data?.deviceId) {
             void markDeviceSeen(ws.data.deviceId);
           }
+          logServerEvent("ws.hello", {
+            deviceId: ws.data?.deviceId,
+            clients: clients.size
+          });
           ws.send(
             JSON.stringify({
               type: "ack",
@@ -463,6 +682,10 @@ const server = Bun.serve<ClientData>({
     },
     close(ws: ServerWebSocket<ClientData>) {
       clients.delete(ws);
+      logServerEvent("ws.close", {
+        deviceId: ws.data?.deviceId,
+        clients: clients.size
+      });
     }
   }
 });

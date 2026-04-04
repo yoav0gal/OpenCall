@@ -1,4 +1,4 @@
-# Dependency directories
+x# Dependency directories
 node_modules/
 jspm_packages/
 
@@ -18,6 +18,8 @@ Thumbs.db
 # Build and environment files
 dist/
 build/
+android/
+ios/
 .env
 .env.local
 .env.development.local

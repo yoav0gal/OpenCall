@@ -39,6 +39,19 @@ const callRecordSchema = z.object({
   endedAt: z.string().nullable().default(null)
 });
 
+const clientLogEntrySchema = z.object({
+  id: z.string(),
+  level: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  source: z.string(),
+  message: z.string(),
+  createdAt: z.string(),
+  bridgeId: z.string(),
+  deviceId: z.string().nullable().default(null),
+  deviceName: z.string().nullable().default(null),
+  sessionToken: z.string().nullable().default(null),
+  context: z.unknown().optional()
+});
+
 const persistedStateSchema = z.object({
   identity: bridgeIdentitySchema.default({
     bridgeId: `bridge_${crypto.randomUUID()}`,
@@ -48,13 +61,15 @@ const persistedStateSchema = z.object({
   pairedDevices: z.array(pairedDeviceSchema).default([]),
   currentPairingSession: pairingSessionSchema.nullable().default(null),
   activeCall: callRecordSchema.nullable().default(null),
-  recentCalls: z.array(callRecordSchema).default([])
+  recentCalls: z.array(callRecordSchema).default([]),
+  recentClientLogs: z.array(clientLogEntrySchema).default([])
 });
 
 export type PairedDevice = z.infer<typeof pairedDeviceSchema>;
 export type PairingSession = z.infer<typeof pairingSessionSchema>;
 export type CallRecord = z.infer<typeof callRecordSchema>;
 export type BridgeIdentity = z.infer<typeof bridgeIdentitySchema>;
+export type ClientLogEntry = z.infer<typeof clientLogEntrySchema>;
 
 type PersistedState = z.infer<typeof persistedStateSchema>;
 
@@ -174,4 +189,13 @@ export function getBridgeIdentity() {
 
 export function getStorePath() {
   return stateFilePath;
+}
+
+export async function addClientLogEntry(entry: ClientLogEntry) {
+  state.recentClientLogs = [entry, ...state.recentClientLogs].slice(0, 200);
+  await persistState();
+}
+
+export function listClientLogEntries() {
+  return state.recentClientLogs;
 }

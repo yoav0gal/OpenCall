@@ -4,14 +4,39 @@
     "slug": "opencall",
     "scheme": "opencall",
     "version": "1.0.0",
+    "icon": "./assets/icon.png",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "web": {
+      "favicon": "./assets/favicon.ico"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow OpenCall to scan a pairing QR code."
+        }
+      ],
+      "expo-audio"
+    ],
     "ios": {
       "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow OpenCall to scan a pairing QR code.",
+        "NSMicrophoneUsageDescription": "Allow OpenCall to record your voice for Gemini Live."
+      },
       "bundleIdentifier": "com.opencall.mobile"
     },
     "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#11212d"
+      },
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO"
+      ],
       "package": "com.opencall.mobile"
     }
   }

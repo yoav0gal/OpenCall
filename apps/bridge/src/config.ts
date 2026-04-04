@@ -12,7 +12,7 @@ const configSchema = z.object({
   LIVEKIT_API_SECRET: z.string().default("secret"),
   LIVEKIT_ROOM_PREFIX: z.string().default("opencall"),
   GEMINI_API_KEY: z.string().optional(),
-  GEMINI_MODEL: z.string().default("gemini-2.5-flash-live-preview")
+  GEMINI_MODEL: z.string().default("gemini-3.1-flash-live-preview")
 });
 
 export type AppConfig = z.infer<typeof configSchema>;
