@@ -1,5 +1,7 @@
 # OpenCall
 
+> Status: This project was stopped mid-development and is not maintained. It is published as-is for reference, learning, and reuse. Expect incomplete flows, rough edges, and outdated dependencies.
+
 OpenCall is a project to manage calls.
 
 ## Current foundation

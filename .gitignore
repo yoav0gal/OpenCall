@@ -1,4 +1,4 @@
-x# Dependency directories
+# Dependency directories
 node_modules/
 jspm_packages/
 
@@ -37,3 +37,11 @@ ios/
 # Testing
 coverage/
 .nyc_output/
+
+# Runtime state and generated Python files
+apps/bridge/data/bridge-state.json
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.tmp-*
